@@ -23,6 +23,7 @@ import unittest
 import urllib
 
 from ..onlineradioinfo import singleton, OnlineRadioInfo, ConnectionError
+from ..radio import Radio
 
 
 class OnlineRadioInfoTestsCommon(unittest.TestCase):
@@ -53,6 +54,8 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
         Those are files in the data/ directory'''
         source = os.path.join(os.path.dirname(__file__), "data", dataid)
         urllibmock.request.urlopen().readall().decode.return_value = open(source).read()
+        # setup the parser to the real one as well for checking parameters later
+        urllibmock.parse.urlencode = urllib.parse.urlencode
 
     def test_is_singleton(self):
         '''Test that OnlineRadioInfoTests is a singleton'''
@@ -67,14 +70,36 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
         '''Ensuring the format for recommended stations is the one the client expect'''
         self._urllibmock_return_from_data(urllibmock, 'recommended_stations')
         stations_list_gen = self.radioinfo.get_recommended_stations()
-        self.assertEquals(len(list(stations_list_gen)), 12)
+
+        radio_list = list(stations_list_gen)
+        # the urllib request is only done when the generator is done at least once, so check only now for call
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/broadcast/editorialreccomendationsembedded")
+        self.assertIsInstance(radio_list[0], Radio)
+        self.assertEquals(len(radio_list), 12)
 
     @patch('private_lib.onlineradioinfo.urllib')
     def test_get_top_stations(self, urllibmock):
         '''Ensuring the format for top stations is the one the client expect'''
         self._urllibmock_return_from_data(urllibmock, 'top_stations')
         stations_list_gen = self.radioinfo.get_top_stations()
-        self.assertEquals(len(list(stations_list_gen)), 100)
+
+        radio_list = list(stations_list_gen)
+        # the urllib request is only done when the generator is done at least once, so check only now for call
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/menu/broadcastsofcategory?category=_top")
+        self.assertIsInstance(radio_list[0], Radio)
+        self.assertEquals(len(radio_list), 100)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_mostwanted_stations(self, urllibmock):
+        '''Ensuring the format for most wanted stations is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'mostwanted_stations')
+        stations_types_content = self.radioinfo.get_most_wanted_stations(num_entries=2)
+
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/account/getmostwantedbroadcastlists?sizeoflists=2")
+        for radio_type in ('local', 'recommended', 'top'):
+            radios = list(stations_types_content[radio_type])
+            self.assertIsInstance(radios[0], Radio)
+            self.assertEquals(len(radios), 2)
 
 
 class OnlineRadioInfoLangTests(OnlineRadioInfoTestsCommon):
@@ -123,8 +148,15 @@ class OnlineRadioInfoJsonLineTests(OnlineRadioInfoTestsCommon):
         urllibmock.request.urlopen().readall().decode.return_value = '{"foo": [{"bar":"baz"}]}'
 
     @patch('private_lib.onlineradioinfo.urllib')
+    def test_url_without_parameters(self, urllibmock):
+        '''Test a call without any parameter'''
+        self._setup_mock_urllib(urllibmock)
+        self.radioinfo._get_json_result_for_parameters('foo/bar')
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/foo/bar")
+
+    @patch('private_lib.onlineradioinfo.urllib')
     def test_getting_results(self, urllibmock):
-        '''Test getting regular results back in a json format'''
+        '''Test getting regular results from a request with parameter in a json format'''
         self._setup_mock_urllib(urllibmock)
         result = self.radioinfo._get_json_result_for_parameters('foo/bar', baz='france', bill='de')
 

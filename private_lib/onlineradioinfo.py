@@ -95,14 +95,30 @@ class OnlineRadioInfo(object):
         for json_radio in self._get_json_result_for_parameters('menu/broadcastsofcategory', category='_top'):
             yield Radio(json_radio, self)
 
+    def get_most_wanted_stations(self, num_entries=25):
+        '''Return a dict of most wanted Radios by types of recommendation, limited to num_entries per type
+
+        Format is: {"recommended": (Radio generator), <- equivalent to get_recommended_stations()
+                    "top":         (Radio generator), <- equivalent to get_top_stations()
+                    "local"        (Radio generator)} <- most listened radio locally
+        '''
+        _log.debug('getting most wanted stations')
+        json_result = self._get_json_result_for_parameters('account/getmostwantedbroadcastlists', sizeoflists=num_entries)
+        result = {}
+        for source_type, dest_type in (('recommendedBroadcasts', 'recommended'), ('topBroadcasts', 'top'), ('localBroadcasts', 'local')):
+            result[dest_type] = (Radio(json_radio, self) for json_radio in json_result[source_type])
+        return result
+
     def _get_json_result_for_parameters(self, path, **parameters):
         '''Get a json resulting object from the selected radio.
 
         path represents the url path to get the request
         parameters are optional parameters given as GET param to the request'''
 
-        url = '{website}/{path}?{parameters}'.format(website=self.radio_base_url, path=path,
-                                                     parameters=urllib.parse.urlencode(parameters))
+        url = '{website}/{path}'.format(website=self.radio_base_url, path=path)
+        if parameters:
+            url += '?{0}'.format(urllib.parse.urlencode(parameters))
+
         req = urllib.request.Request(url)
 
         try:
