@@ -23,6 +23,8 @@ import locale
 import logging
 import urllib
 
+from .radio import Radio
+
 _log = logging.getLogger(__name__)
 
 
@@ -80,6 +82,18 @@ class OnlineRadioInfo(object):
 
         _log.debug('return category types')
         return self.VALID_CATEGORY_TYPES
+
+    def get_recommended_stations(self):
+        '''returns a generator list of 12 editors recommended stations'''
+        _log.debug('getting recommended stations')
+        for json_radio in self._get_json_result_for_parameters('broadcast/editorialreccomendationsembedded'):
+            yield Radio(json_radio, self)
+
+    def get_top_stations(self):
+        """returns a generator list of the 100 most listen stations"""
+        _log.debug('getting top stations')
+        for json_radio in self._get_json_result_for_parameters('menu/broadcastsofcategory', category='_top'):
+            yield Radio(json_radio, self)
 
     def _get_json_result_for_parameters(self, path, **parameters):
         '''Get a json resulting object from the selected radio.

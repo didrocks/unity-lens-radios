@@ -27,6 +27,8 @@ from ..onlineradioinfo import singleton, OnlineRadioInfo, ConnectionError
 
 class OnlineRadioInfoTestsCommon(unittest.TestCase):
 
+    '''Represent the online radio factory, most of methods returns Radio objects'''
+
     def setUp(self):
         # create the singleton. Don't call the super method for children if they need
         # to create the singleton with other parameters
@@ -45,6 +47,13 @@ class OnlineRadioInfoTestsCommon(unittest.TestCase):
 
 class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
 
+    def _urllibmock_return_from_data(self, urllibmock, dataid):
+        '''Return some real content for urllibmock based on dataid
+
+        Those are files in the data/ directory'''
+        source = os.path.join(os.path.dirname(__file__), "data", dataid)
+        urllibmock.request.urlopen().readall().decode.return_value = open(source).read()
+
     def test_is_singleton(self):
         '''Test that OnlineRadioInfoTests is a singleton'''
         self.assertEqual(self.radioinfo, OnlineRadioInfo())
@@ -52,6 +61,20 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
     def test_get_category(self):
         '''Test that get category is reporting what we need'''
         self.assertEqual(self.radioinfo.get_category_types(), self.radioinfo.VALID_CATEGORY_TYPES)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_recommended_stations(self, urllibmock):
+        '''Ensuring the format for recommended stations is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'recommended_stations')
+        stations_list_gen = self.radioinfo.get_recommended_stations()
+        self.assertEquals(len(list(stations_list_gen)), 12)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_top_stations(self, urllibmock):
+        '''Ensuring the format for top stations is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'top_stations')
+        stations_list_gen = self.radioinfo.get_top_stations()
+        self.assertEquals(len(list(stations_list_gen)), 100)
 
 
 class OnlineRadioInfoLangTests(OnlineRadioInfoTestsCommon):
@@ -116,6 +139,7 @@ class OnlineRadioInfoJsonLineTests(OnlineRadioInfoTestsCommon):
         '''Raising an exception while can't connect to the Internet or getting content'''
         self._setup_mock_urllib(urllibmock)
         urllibmock.request.urlopen = Mock(side_effect=urllib.error.HTTPError(Mock(), Mock(), Mock(), Mock(), Mock()))
+        self.assertRaises(ConnectionError, self.radioinfo._get_json_result_for_parameters, 'foo/bar', baz='france', bill='de')
 
         urllibmock.request.urlopen = Mock(side_effect=urllib.error.URLError(Mock(), Mock()))
         self.assertRaises(ConnectionError, self.radioinfo._get_json_result_for_parameters, 'foo/bar', baz='france', bill='de')
