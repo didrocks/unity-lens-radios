@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 from mock import patch, Mock
 import os
 import unittest
@@ -27,8 +28,6 @@ from ..radio import Radio
 
 
 class OnlineRadioInfoTestsCommon(unittest.TestCase):
-
-    '''Represent the online radio factory, most of methods returns Radio objects'''
 
     def setUp(self):
         # create the singleton. Don't call the super method for children if they need
@@ -85,7 +84,7 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
 
         radio_list = list(stations_list_gen)
         # the urllib request is only done when the generator is done at least once, so check only now for call
-        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/menu/broadcastsofcategory?category=_top")
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/menu/broadcastsofcategory?category=_top&value=")
         self.assertIsInstance(radio_list[0], Radio)
         self.assertEquals(len(radio_list), 100)
 
@@ -100,6 +99,63 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
             radios = list(stations_types_content[radio_type])
             self.assertIsInstance(radios[0], Radio)
             self.assertEquals(len(radios), 2)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_categories_by_category_type(self, urllibmock):
+        '''Ensuring the format for category results is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'availablecategory_per_genre')
+        categories = self.radioinfo.get_categories_by_category_type('genre')
+
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/menu/valuesofcategory?category=_genre")
+        self.assertIsInstance(categories, list)
+        self.assertTrue(len(categories) > 0)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_stations_by_category(self, urllibmock):
+        '''Ensuring the format for getting stations by category is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'radios_filtered_blues')
+        stations_list_gen = self.radioinfo.get_stations_by_category('genre', 'Blues')
+
+        radio_list = list(stations_list_gen)
+        # the urllib request is only done when the generator is done at least once, so check only now for call
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/menu/broadcastsofcategory?category=_genre&value=Blues")
+        self.assertIsInstance(radio_list[0], Radio)
+        self.assertTrue(len(radio_list) > 0)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_stations_by_searchstring(self, urllibmock):
+        '''Ensuring the format for getting stations by per a search is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'radios_by_search')
+        stations_list_gen = self.radioinfo.get_stations_by_searchstring('radio')
+
+        radio_list = list(stations_list_gen)
+        # the urllib request is only done when the generator is done at least once, so check only now for call
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&end=1000")
+        self.assertIsInstance(radio_list[0], Radio)
+        self.assertEquals(len(radio_list), 1000)
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_details_by_station_id(self, urllibmock):
+        '''Ensuring the format for getting stations by per a search is the one the client expect'''
+        self._urllibmock_return_from_data(urllibmock, 'radio_by_id2511')
+        stations_additional_details = self.radioinfo.get_details_by_station_id(2511)
+
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/broadcast/getbroadcastembedded?broadcast=2511")
+        self.assertEquals(stations_additional_details, {'city': 'Paris',
+                                                        'current_track': 'Megashira - At Last',
+                                                        'description': 'Makes your nights sweeter ! Programmation downtempo, soul et chillout par Vmix.\r\n',
+                                                        'stream_urls': ['http://live2.vmix.fr:8010'],
+                                                        'web_link': 'http://www.vmix.fr/'})
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_get_stations_by_searchstring_with_limit(self, urllibmock):
+        '''Ensuring the search is restricted if asked for so'''
+        self._urllibmock_return_from_data(urllibmock, 'radios_by_search')
+        stations_list_gen = self.radioinfo.get_stations_by_searchstring('radio', 42)
+
+        list(stations_list_gen)
+        # the urllib request is only done when the generator is done at least once, so check only now for call
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&end=42")
 
 
 class OnlineRadioInfoLangTests(OnlineRadioInfoTestsCommon):
@@ -151,16 +207,28 @@ class OnlineRadioInfoJsonLineTests(OnlineRadioInfoTestsCommon):
     def test_url_without_parameters(self, urllibmock):
         '''Test a call without any parameter'''
         self._setup_mock_urllib(urllibmock)
-        self.radioinfo._get_json_result_for_parameters('foo/bar')
+        self.radioinfo._url_request('foo/bar')
         urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/foo/bar")
 
     @patch('private_lib.onlineradioinfo.urllib')
-    def test_getting_results(self, urllibmock):
+    def test_getting_http_results(self, urllibmock):
+        '''Test getting regular results from a request with parameter in a string format (http request only)'''
+        self._setup_mock_urllib(urllibmock)
+        result = self.radioinfo._url_request('foo/bar', baz='france', bill='de')
+
+        self.assertEqual(result, urllibmock.request.urlopen().readall().decode.return_value)
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/foo/bar?bill=de&baz=france")
+        self.assertTrue(urllibmock.request.urlopen.called)
+        urllibmock.request.urlopen().headers.get_content_charset.assert_called_once_with()
+        urllibmock.request.urlopen().readall().decode.assert_called_once_with("UTF-8")
+
+    @patch('private_lib.onlineradioinfo.urllib')
+    def test_getting_json_results(self, urllibmock):
         '''Test getting regular results from a request with parameter in a json format'''
         self._setup_mock_urllib(urllibmock)
         result = self.radioinfo._get_json_result_for_parameters('foo/bar', baz='france', bill='de')
 
-        self.assertEqual(result, {'foo': [{'bar': 'baz'}]})
+        self.assertEqual(result, json.loads(urllibmock.request.urlopen().readall().decode.return_value))
         urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/foo/bar?bill=de&baz=france")
         self.assertTrue(urllibmock.request.urlopen.called)
         urllibmock.request.urlopen().headers.get_content_charset.assert_called_once_with()
@@ -171,10 +239,10 @@ class OnlineRadioInfoJsonLineTests(OnlineRadioInfoTestsCommon):
         '''Raising an exception while can't connect to the Internet or getting content'''
         self._setup_mock_urllib(urllibmock)
         urllibmock.request.urlopen = Mock(side_effect=urllib.error.HTTPError(Mock(), Mock(), Mock(), Mock(), Mock()))
-        self.assertRaises(ConnectionError, self.radioinfo._get_json_result_for_parameters, 'foo/bar', baz='france', bill='de')
+        self.assertRaises(ConnectionError, self.radioinfo._url_request, 'foo/bar', baz='france', bill='de')
 
         urllibmock.request.urlopen = Mock(side_effect=urllib.error.URLError(Mock(), Mock()))
-        self.assertRaises(ConnectionError, self.radioinfo._get_json_result_for_parameters, 'foo/bar', baz='france', bill='de')
+        self.assertRaises(ConnectionError, self.radioinfo._url_request, 'foo/bar', baz='france', bill='de')
 
     @patch('private_lib.onlineradioinfo.urllib')
     def test_invalid_json_error(self, urllibmock):
@@ -182,3 +250,55 @@ class OnlineRadioInfoJsonLineTests(OnlineRadioInfoTestsCommon):
         self._setup_mock_urllib(urllibmock)
         urllibmock.request.urlopen().readall().decode.return_value = '{"foo": [{"bar":"baz"}] extraword}'
         self.assertRaises(ConnectionError, self.radioinfo._get_json_result_for_parameters, 'foo/bar', baz='france', bill='de')
+
+
+class OnlineRadioInfoParsing(OnlineRadioInfoTestsCommon):
+
+    def _setup_playlist_content(self, filename, url_requestmock):
+        '''Return and marshmall a playlist url on _url_request call'''
+        full_path = os.path.join(os.path.dirname(__file__), "data", filename)
+        url_requestmock.return_value = open(full_path).read()
+
+    def test_valid_m3u_file(self):
+        '''Test a valid m3u file parsing'''
+        # as we need self.radioinfo and self isn't reachable from the decorator
+        with patch.object(self.radioinfo, '_url_request') as url_requestmock:
+            m3u_file = 'valid.m3u'
+            self._setup_playlist_content(m3u_file, url_requestmock)
+            radio_urls = self.radioinfo._resolve_playlist(m3u_file)
+            url_requestmock.assert_called_once_with(m3u_file)
+            self.assertEquals(radio_urls, ['http://awesome.net/trance.mp3', 'http://awesome.net/dance.mp3'])
+
+    def test_valid_pls_file(self):
+        '''Test a valid pls file parsing'''
+        with patch.object(self.radioinfo, '_url_request') as url_requestmock:
+            pls_file = 'valid.pls'
+            self._setup_playlist_content(pls_file, url_requestmock)
+            radio_urls = self.radioinfo._resolve_playlist(pls_file)
+            url_requestmock.assert_called_once_with(pls_file)
+            self.assertEquals(radio_urls, ['http://awesome.net/trance.mp3', 'http://awesome.net/dance.mp3'])
+
+    def test_invalid_m3u_file(self):
+        '''Test a invalid m3u file parsing, returning the _resolve_playlist parameter'''
+        with patch.object(self.radioinfo, '_url_request') as url_requestmock:
+            m3u_file = 'invalid.m3u'
+            self._setup_playlist_content(m3u_file, url_requestmock)
+            radio_urls = self.radioinfo._resolve_playlist(m3u_file)
+            url_requestmock.assert_called_once_with(m3u_file)
+            self.assertEquals(radio_urls, ['invalid.m3u'])
+
+    def test_invalid_pls_file(self):
+        '''Test a invalid pls file parsing, returning the _resolve_playlist parameter'''
+        with patch.object(self.radioinfo, '_url_request') as url_requestmock:
+            pls_file = 'invalid.pls'
+            self._setup_playlist_content(pls_file, url_requestmock)
+            radio_urls = self.radioinfo._resolve_playlist(pls_file)
+            url_requestmock.assert_called_once_with(pls_file)
+            self.assertEquals(radio_urls, ['invalid.pls'])
+
+    def test_no_request_for_nonplaylist(self):
+        '''Ensure that there is no connexion if we don't try to parse a playlist'''
+        with patch.object(self.radioinfo, '_url_request') as url_requestmock:
+            radio_urls = self.radioinfo._resolve_playlist('http://foo.net')
+            self.assertEquals(url_requestmock.call_count, 0)
+            self.assertEquals(radio_urls, ['http://foo.net'])

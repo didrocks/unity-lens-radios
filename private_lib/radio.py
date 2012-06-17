@@ -33,9 +33,25 @@ class Radio(object):
         self.country = data['country']
         self.rating = data['rating']
         self.id = data['id']
-        self.stream_url = None
+        self.city = None
+        self.description = None
+        self.stream_urls = None
+        self.web_link = None
 
         # keep it for lazy loading of more info on the radio
         self._onlineradioinfo = onlineradioinfo
 
-        # TODO: get stream_url lazy (when activation happen)
+    def refresh_details_attributes(self):
+        '''Load details attributes and merge them into the object'''
+        details = self._onlineradioinfo.get_details_by_station_id(self.id)
+        self.city = details['city']
+        self.current_track = details['current_track']
+        self.description = details['description']
+        self.stream_urls = details['stream_urls']
+        self.web_link = details['web_link']
+
+    def __getattribute__(self, name):
+        '''Lazy load some attributes and use that to refresh the current_track'''
+        if object.__getattribute__(self, 'stream_urls') is None and name in ('city', 'description', 'stream_urls', 'web_link'):
+            self.refresh_details_attributes()
+        return object.__getattribute__(self, name)
