@@ -57,7 +57,7 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
         urllibmock.parse.urlencode = urllib.parse.urlencode
 
     def test_is_singleton(self):
-        '''Test that OnlineRadioInfoTests is a singleton'''
+        '''Test that OnlineRadioInfo is a singleton'''
         self.assertEqual(self.radioinfo, OnlineRadioInfo())
 
     def test_get_category(self):

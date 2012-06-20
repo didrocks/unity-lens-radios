@@ -39,8 +39,8 @@ class RadioTests(unittest.TestCase):
         radio = self.radio
         self.assertEqual(radio.name, 'Vmix Late')
         self.assertEqual(radio.picture_url, 'http://static.radio.de/images/broadcasts/2511_fr_1.gif')
-        self.assertEqual(list(radio.genre), ['Electro', 'Lounge'])
-        self.assertIsInstance(radio.genre, (a for a in [1]).__class__)
+        self.assertEqual(list(radio.genres), ['Electro', 'Lounge'])
+        self.assertIsInstance(radio.genres, (a for a in [1]).__class__)
         self.assertEqual(radio.current_track, 'Wahoo - Holding You')
         self.assertEqual(radio.country, 'France')
         self.assertEqual(radio.rating, 5)

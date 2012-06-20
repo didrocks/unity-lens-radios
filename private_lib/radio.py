@@ -28,7 +28,7 @@ class Radio(object):
         self.name = data['name']
         self.picture_url = '{0}{1}'.format(data['pictureBaseURL'],
                                            data['picture1Name'])
-        self.genre = (x.strip() for x in data['genresAndTopics'].split(','))
+        self.genres = (x.strip() for x in data['genresAndTopics'].split(','))
         self.current_track = data['currentTrack']
         self.country = data['country']
         self.rating = data['rating']
