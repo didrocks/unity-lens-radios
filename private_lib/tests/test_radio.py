@@ -27,7 +27,8 @@ from ..radio import Radio
 class RadioTests(unittest.TestCase):
 
     def setUp(self):
-        self.radio_data = json.loads('{"playable":"FREE","genresAndTopics":"Electro, Lounge","broadcastType":1,"picture1Name":"2511_fr_1.gif",'\
+        self.radio_data = json.loads('{"playable":"FREE","genresAndTopics":"Electro, Années 90, Years 00s, Years 1500, Years 80s, Lounge",'\
+                                     '"broadcastType":1,"picture1Name":"2511_fr_1.gif",'\
                                      '"streamContentFormat":"MP3","currentTrack":"Wahoo - Holding You","country":"France","id":2511,"rank":199,'\
                                      '"name":"Vmix Late","subdomain":"vmixlatemix","bitrate":128,"rating":5,'\
                                      '"pictureBaseURL":"http://static.radio.de/images/broadcasts/"}')
@@ -39,13 +40,24 @@ class RadioTests(unittest.TestCase):
         radio = self.radio
         self.assertEqual(radio.name, 'Vmix Late')
         self.assertEqual(radio.picture_url, 'http://static.radio.de/images/broadcasts/2511_fr_1.gif')
-        self.assertEqual(list(radio.genres), ['Electro', 'Lounge'])
-        self.assertIsInstance(radio.genres, (a for a in [1]).__class__)
+        self.assertEqual(radio.genres, ['Electro', 'Lounge'])
+        self.assertEqual(radio.decades, [1990, 2000, 1500, 1980])
         self.assertEqual(radio.current_track, 'Wahoo - Holding You')
         self.assertEqual(radio.country, 'France')
         self.assertEqual(radio.rating, 5)
         self.assertEqual(radio.id, 2511)
         self.assertRaises(AttributeError, lambda: radio.playable)
+
+    def test_ensure_no_decade_if_nothing(self):
+        '''Test that no decade is used if we have no decade on list'''
+        radio_data = json.loads('{"playable":"FREE","genresAndTopics":"Electro, Lounge",'\
+                                '"broadcastType":1,"picture1Name":"2511_fr_1.gif",'\
+                                '"streamContentFormat":"MP3","currentTrack":"Wahoo - Holding You","country":"France","id":2511,"rank":199,'\
+                                '"name":"Vmix Late","subdomain":"vmixlatemix","bitrate":128,"rating":5,'\
+                                '"pictureBaseURL":"http://static.radio.de/images/broadcasts/"}')
+        radio = Radio(radio_data, None)
+        self.assertEqual(radio.genres, ['Electro', 'Lounge'])
+        self.assertEqual(radio.decades, [])
 
     def test_refresh_details_attributes(self):
         '''Test refresh details radio attributes'''

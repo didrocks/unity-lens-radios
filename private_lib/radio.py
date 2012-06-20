@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+
 
 class Radio(object):
 
@@ -28,7 +30,24 @@ class Radio(object):
         self.name = data['name']
         self.picture_url = '{0}{1}'.format(data['pictureBaseURL'],
                                            data['picture1Name'])
-        self.genres = (x.strip() for x in data['genresAndTopics'].split(','))
+        year_regexp = re.compile("(Années*|Years*) (\d*)")
+        genres_list = []
+        decade_list = []
+        for genre_candidate in [x.strip() for x in data['genresAndTopics'].split(',')]:
+            try:
+                decade = year_regexp.split(genre_candidate)[2]
+                comparison_decade = int(decade)  # keep initial for 00 or 05 years
+                if comparison_decade > 20 and comparison_decade < 100:
+                    decade_list.append(int('19{0}'.format(decade)))
+                elif comparison_decade < 20:
+                    decade_list.append(int('20{0}'.format(decade)))
+                else:
+                    decade_list.append(comparison_decade)
+            except IndexError:
+                genres_list.append(genre_candidate)
+        self.decades = decade_list
+        self.genres = genres_list
+
         self.current_track = data['currentTrack']
         self.country = data['country']
         self.rating = data['rating']
