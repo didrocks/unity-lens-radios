@@ -32,20 +32,14 @@ class Radio(object):
                                            data['picture1Name'])
         year_regexp = re.compile("(Années*|Years*) (\d*)")
         genres_list = []
-        decade_list = []
+        decades_list = []
         for genre_candidate in [x.strip() for x in data['genresAndTopics'].split(',')]:
             try:
                 decade = year_regexp.split(genre_candidate)[2]
-                comparison_decade = int(decade)  # keep initial for 00 or 05 years
-                if comparison_decade > 20 and comparison_decade < 100:
-                    decade_list.append(int('19{0}'.format(decade)))
-                elif comparison_decade < 20:
-                    decade_list.append(int('20{0}'.format(decade)))
-                else:
-                    decade_list.append(comparison_decade)
+                decades_list.append(transform_decade_str_in_int(decade))
             except IndexError:
                 genres_list.append(genre_candidate)
-        self.decades = decade_list
+        self.decades = decades_list
         self.genres = genres_list
 
         self.current_track = data['currentTrack']
@@ -74,3 +68,15 @@ class Radio(object):
         if object.__getattribute__(self, 'stream_urls') is None and name in ('city', 'description', 'stream_urls', 'web_link'):
             self.refresh_details_attributes()
         return object.__getattribute__(self, name)
+
+
+def transform_decade_str_in_int(decade):
+    '''Transform simple decade form, like 90 to 1900 and 00 to 2000.
+
+    Keep full date as they are'''
+    comparison_decade = int(decade)  # keep initial for 00 or 05 years
+    if comparison_decade > 20 and comparison_decade < 100:
+        return int('19{0}'.format(decade))
+    elif comparison_decade < 20:
+        return int('20{0}'.format(decade))
+    return comparison_decade

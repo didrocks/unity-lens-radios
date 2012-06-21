@@ -22,6 +22,7 @@ from gi.repository import Unity
 
 from .enums import CATEGORIES
 from .onlineradioinfo import OnlineRadioInfo
+from .radio import transform_decade_str_in_int
 from .tools import singleton
 
 _ = gettext.gettext
@@ -73,7 +74,7 @@ class RadioHandler(object):
         all_radio_results = self._last_all_radios
         # first, the search itself
         if search_terms != self._last_search:
-            pass # TODO: magic here for the search and kill the get_initial_content call
+            pass  # TODO: magic here for the search and kill the get_initial_content call
 
         radio_results = all_radio_results
         # filters the list of radios
@@ -97,10 +98,10 @@ class RadioHandler(object):
         if decade_filter.get_first_active() and decade_filter.get_last_active():
             filters["decade"] = [decade_filter.get_first_active(), decade_filter.get_last_active()]
         for category in ("genre", "country"):
-            for option in scope.get_filter[category].options:
+            for option in scope.get_filter(category).options:
                 if option.active:
                     if category not in filters:
-                        filters.category = set()
+                        filters[category] = set()
                     filters[category].add(option.id)
         return filters
 
@@ -136,14 +137,22 @@ class RadioHandler(object):
         valid = True
         for category in filters:
             if category == "decade":
-                pass # TODO
+                # initialize with false by default
+                if radio.decades:
+                    valid = False
+                for decade in radio.decades:
+                    radio_decade = transform_decade_str_in_int(decade)
+                    if radio_decade >= filters['decade'][0] and radio_decade <= filters['decade'][1]:
+                        valid = True
+                        break
             elif category == "genre":
                 for genre in radio.genres:
-                    if genre not in category["genre"]:
+                    if genre not in filters["genre"]:
                         valid = False
                         break
             elif category == "country":
-                if radio.country not in category["country"]:
+                if radio.country not in filters["country"]:
                     valid = False
-                    break
+            if not valid:
+                break  # no need to check the other filters if not valid
         return valid

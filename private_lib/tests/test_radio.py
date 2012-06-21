@@ -21,7 +21,7 @@ import json
 from mock import patch
 import unittest
 
-from ..radio import Radio
+from ..radio import Radio, transform_decade_str_in_int
 
 
 class RadioTests(unittest.TestCase):
@@ -88,7 +88,14 @@ class RadioTests(unittest.TestCase):
             radio.id
             radio.current_track
             self.assertEquals(onelineradioinfo.get_details_by_station_id.call_count, 0)
-            self.assertEqual(radio.city, 'Paris')
+            self.assertEquals(radio.city, 'Paris')
             self.assertEquals(onelineradioinfo.get_details_by_station_id.call_count, 1)
-            self.assertEqual(radio.stream_urls, ['http://live2.vmix.fr:8010'])
+            self.assertEquals(radio.stream_urls, ['http://live2.vmix.fr:8010'])
             self.assertEquals(onelineradioinfo.get_details_by_station_id.call_count, 1)
+
+    def test_transform_decade(self):
+        '''Test different form of decade transformation'''
+        self.assertEquals(transform_decade_str_in_int('00'), 2000)
+        self.assertEquals(transform_decade_str_in_int('90'), 1990)
+        self.assertEquals(transform_decade_str_in_int('1995'), 1995)
+        self.assertEquals(transform_decade_str_in_int('230'), 230)
