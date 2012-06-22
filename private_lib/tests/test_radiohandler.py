@@ -51,7 +51,7 @@ class RadioHandlerTests(unittest.TestCase):
 
     def test_ensure_no_last_result(self):
         '''Ensure that once it's created fresh, we have no previous result'''
-        self.assertEqual(self.radiohandler._last_all_radios, None)
+        self.assertEqual(self.radiohandler._last_all_radios_dict, {})
         self.assertEqual(self.radiohandler._last_search, None)
 
     def test_getting_unity_categories(self):
@@ -138,7 +138,6 @@ class RadioHandlerTests(unittest.TestCase):
         test_filter = {'decade': (1990, 2000), 'genre': ['Techno', 'Rock']}
         self.assertTrue(self.radiohandler._is_radio_fulfill_filters(valid_radio, test_filter))
 
-    # TODO: test act
     def test_return_active_filters(self):
         '''Testing that active filters that are returned have the expected form'''
         def return_mock_filter_with_active_options(domain):
@@ -200,3 +199,107 @@ class RadioHandlerTests(unittest.TestCase):
 
         scope.get_filter = return_mock_filter_with_no_country
         self.assertEquals(self.radiohandler._return_active_filters(scope), {'genre': {43}, 'decade': [1900, 1950]})
+
+    def test_filter_radios(self):
+        '''Test the small filtering of radio calls the right function depending on slave result'''
+        fake_radios = range(10)
+        with patch.object(self.radiohandler, '_is_radio_fulfill_filters') as _is_radio_fulfill_filters_func:
+            _is_radio_fulfill_filters_func.side_effect = lambda x, absorber: x % 2
+            self.assertTrue(self.radiohandler._filter_radios(fake_radios, None), [1, 3, 5, 7, 9])
+
+
+class RadioHandlerSearchTests(RadioHandlerTests):
+
+    def setUp(self):
+        super().setUp()
+        radio_attributes = {'name': "Radio1", "pictureBaseURL": "/root/", "picture1Name": "foo.png", "genresAndTopics": "Rock, Techno, Années 90s, Years 2100",
+                         'currentTrack': "Radio1 current track", "country": "France", "rating": 5, "id": 42}
+        self.radio1 = Radio(radio_attributes, None)
+        radio_attributes = {'name': "Radio2", "pictureBaseURL": "/root/", "picture1Name": "bar.png", "genresAndTopics": "Rock, Techno, Années 90s, Years 2100",
+                         'currentTrack': "Radio2 current track", "country": "UK", "rating": 5, "id": 2}
+        self.radio2 = Radio(radio_attributes, None)
+        self.fake_model = Mock()
+
+    @patch('private_lib.radiohandler.OnlineRadioInfo')
+    def test_search_content_global(self, onlineradioinfromclass):
+        '''Test searching content global without any filter'''
+        fake_radio_results = {"recommended": (), "top": [self.radio1], "local": [self.radio1, self.radio2]}
+
+        with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
+            onlineradioinfromclass().get_most_wanted_stations.return_value = fake_radio_results
+            _return_active_filters_func.side_effect = lambda x: None
+            self.radiohandler.search_content("", self.fake_model, None)
+
+            onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
+            self.assertEquals(self.fake_model.append.call_args_list, [mock.call(42, '/root/foo.png', 2, 'text/html', 'Radio1', 'Radio1 current track', ''),
+                                                                      mock.call(2, '/root/bar.png', 2, 'text/html', 'Radio2', 'Radio2 current track', ''),
+                                                                      mock.call(42, '/root/foo.png', 1, 'text/html', 'Radio1', 'Radio1 current track', '')])
+
+    @patch('private_lib.radiohandler.OnlineRadioInfo')
+    def test_search_content_search(self, onlineradioinfromclass):
+        '''Test searching content without any filter'''
+        fake_radio_results = [self.radio1, self.radio2]
+
+        with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
+            onlineradioinfromclass().get_stations_by_searchstring.return_value = fake_radio_results
+            _return_active_filters_func.side_effect = lambda x: None
+            self.radiohandler.search_content("searchsearch", self.fake_model, None)
+
+            onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
+            self.assertEquals(self.fake_model.append.call_args_list, [mock.call(42, '/root/foo.png', 3, 'text/html', 'Radio1', 'Radio1 current track', ''),
+                                                                      mock.call(2, '/root/bar.png', 3, 'text/html', 'Radio2', 'Radio2 current track', '')])
+
+    @patch('private_lib.radiohandler.OnlineRadioInfo')
+    def test_search_content_global_with_filter(self, onlineradioinfromclass):
+        '''Test searching content global with filters'''
+        fake_radio_results = {"recommended": (), "top": [self.radio1], "local": [self.radio1, self.radio2]}
+
+        with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
+            onlineradioinfromclass().get_most_wanted_stations.return_value = fake_radio_results
+            _return_active_filters_func.side_effect = lambda x: {"country": ['France']}
+            self.radiohandler.search_content("", self.fake_model, None)
+
+            onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
+            self.assertEquals(self.fake_model.append.call_args_list, [mock.call(42, '/root/foo.png', 2, 'text/html', 'Radio1', 'Radio1 current track', ''),
+                                                                      mock.call(42, '/root/foo.png', 1, 'text/html', 'Radio1', 'Radio1 current track', '')])
+
+    @patch('private_lib.radiohandler.OnlineRadioInfo')
+    def test_search_content_search_with_filters(self, onlineradioinfromclass):
+        '''Test searching content with filters'''
+        fake_radio_results = [self.radio1, self.radio2]
+
+        with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
+            onlineradioinfromclass().get_stations_by_searchstring.return_value = fake_radio_results
+            _return_active_filters_func.side_effect = lambda x: {"country": ['France']}
+            self.radiohandler.search_content("searchsearch", self.fake_model, None)
+
+            onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
+            self.assertEquals(self.fake_model.append.call_args_list, [mock.call(42, '/root/foo.png', 3, 'text/html', 'Radio1', 'Radio1 current track', '')])
+
+    @patch('private_lib.radiohandler.OnlineRadioInfo')
+    def test_search_using_cache(self, onlineradioinfromclass):
+        '''Test that 2 consequent searching is using the cache'''
+        fake_radio_results = {"recommended": (), "top": [self.radio1], "local": [self.radio1, self.radio2]}
+        with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
+            onlineradioinfromclass().get_most_wanted_stations.return_value = fake_radio_results
+            _return_active_filters_func.side_effect = lambda x: None
+            self.radiohandler.search_content("", self.fake_model, None)
+            self.assertEquals(self.radiohandler._last_search, "")
+
+            onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
+            # second search, should still be searched once
+            self.radiohandler.search_content("", self.fake_model, None)
+            self.assertEquals(self.radiohandler._last_search, "")
+            onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
+
+            # Same with real search, not only global
+            fake_radio_results = [self.radio1, self.radio2]
+            onlineradioinfromclass().get_stations_by_searchstring.return_value = fake_radio_results
+            self.radiohandler.search_content("searchsearch", self.fake_model, None)
+            self.assertEquals(self.radiohandler._last_search, "searchsearch")
+
+            onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
+            self.radiohandler.search_content("searchsearch", self.fake_model, None)
+            self.assertEquals(self.radiohandler._last_search, "searchsearch")
+            onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
+

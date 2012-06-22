@@ -35,7 +35,7 @@ class RadioHandler(object):
     def __init__(self):
         self._last_search = None
         # all radios from previous search, before filtering
-        self._last_all_radios = None
+        self._last_all_radios_dict = {}
 
     def get_unity_radio_categories(self, categories):
         '''Build and return new radio categories for unity'''
@@ -69,22 +69,39 @@ class RadioHandler(object):
         return unity_filters
 
     def search_content(self, search_terms, model, scope):
-        '''Search currrent content, eventually filtered, returned an updated model'''
+        '''Search current content, eventually filtered, returns an updated model'''
 
-        all_radio_results = self._last_all_radios
+        radios_dict = self._last_all_radios_dict
         # first, the search itself
-        if search_terms != self._last_search:
-            pass  # TODO: magic here for the search and kill the get_initial_content call
+        if self._last_search is None or search_terms != self._last_search:
+            model.clear()
+            if search_terms == "":
+                radios_dict = OnlineRadioInfo().get_most_wanted_stations()
+                # change the generator to a list for copying them back in cache
+                for category in radios_dict:
+                    radios_dict[category] = list(radios_dict[category])
+            else:
+                radios_dict["search"] = OnlineRadioInfo().get_stations_by_searchstring(search_terms)
 
-        radio_results = all_radio_results
-        # filters the list of radios
+            # save the state, without filters (all radios)
+            self._last_all_radios_dict = radios_dict
+            self._last_search = search_terms
+
         filters = self._return_active_filters(scope)
+        validate_function = lambda radio, absorber: radio
         if filters:
-            radio_results = self._filter_radios(radio_results, filters)
-
-        # save the state, without filters (all radios)
-        self._last_all_radios = all_radio_results
-        self._last_search = search_terms
+            validate_function = self._filter_radios
+        for category in radios_dict:
+            if category == "search":
+                cat = CATEGORIES.SEARCH_RADIO
+            elif category == "recommended":
+                cat = CATEGORIES.RECOMMENDED
+            elif category == "top":
+                cat = CATEGORIES.TOP
+            elif category == "local":
+                cat = CATEGORIES.LOCAL
+            for valid_radio in validate_function(radios_dict[category], filters):
+                model.append(valid_radio.id, valid_radio.picture_url, cat, "text/html", valid_radio.name, valid_radio.current_track, "")
 
     def _return_active_filters(self, scope):
         '''Return current active filters for the scope
@@ -104,28 +121,6 @@ class RadioHandler(object):
                         filters[category] = set()
                     filters[category].add(option.id)
         return filters
-
-    def get_initial_content(self, model, filters=None):
-        '''Get the recommended, top, local stations
-
-        Return the whole model object'''
-
-        # TODO: Merge into the search method
-
-        model.clear()
-        radios_dict = OnlineRadioInfo().get_most_wanted_stations()
-        for category in radios_dict:
-            if filters:
-                radios = self._filter_radios(radios_dict[category])
-            else:
-                # resolve all radios in a list as we want to store them
-                radios = list(radios_dict[category])
-            self._last_radio_content = radios
-            for radio in radios:
-                #model.append((uri, icon_hint, cat, "text/html",
-                #        title, comment, dnd_uri))
-                #model.append(uri, entry.picture, CATEGORY_LOOKUP, mime, name, display, dnd_uri)
-                pass
 
     def _filter_radios(self, radios, filters):
         '''Filter a radio set and return matching radios'''
