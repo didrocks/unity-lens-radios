@@ -130,7 +130,7 @@ class OnlineRadioInfo(object):
         '''returns a list of possible values of category for a given category_type.
 
         This should be used only if you want to introspect in a ui the available categories'''
-        _log.debug('returning available categories for category type [{0}'.format(category_type))
+        _log.debug('returning available categories for category type {0}'.format(category_type))
         return self._get_json_result_for_parameters('menu/valuesofcategory', category='_{0}'.format(category_type))
 
     def get_stations_by_category(self, category_type, category_value=''):

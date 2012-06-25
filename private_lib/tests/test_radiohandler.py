@@ -289,29 +289,38 @@ class RadioHandlerSearchTests(RadioHandlerTests):
 
     @patch('private_lib.radiohandler.OnlineRadioInfo')
     def test_search_using_cache(self, onlineradioinfromclass):
-        '''Test that 2 consequent searching is using the cache'''
+        '''Test that 2 consequent searching is using the cache and that the cache is cleared up between 2 calls'''
         fake_radio_results = {"recommended": (), "top": [self.radio1], "local": [self.radio1, self.radio2]}
         with patch.object(self.radiohandler, '_return_active_filters') as _return_active_filters_func:
             onlineradioinfromclass().get_most_wanted_stations.return_value = fake_radio_results
             _return_active_filters_func.side_effect = lambda x: None
             # consume the generator
             list(self.radiohandler.get_model_data_from_content_search("", None))
+            self.assertEquals(list(self.radiohandler._last_all_radios_dict.keys()), ["recommended", "local", "top"])
             self.assertEquals(self.radiohandler._last_search, "")
 
             onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
             # second search, should still be searched once
             list(self.radiohandler.get_model_data_from_content_search("", None))
+            self.assertEquals(list(self.radiohandler._last_all_radios_dict.keys()), ["recommended", "local", "top"])
             self.assertEquals(self.radiohandler._last_search, "")
             onlineradioinfromclass().get_most_wanted_stations.assert_called_once_with()
 
-            # Same with real search, not only global
+            # Same with real search, not only global (and ensure that the cache is cleaned)
             fake_radio_results = [self.radio1, self.radio2]
             onlineradioinfromclass().get_stations_by_searchstring.return_value = fake_radio_results
             list(self.radiohandler.get_model_data_from_content_search("searchsearch", None))
+            self.assertEquals(list(self.radiohandler._last_all_radios_dict.keys()), ["search"])
             self.assertEquals(self.radiohandler._last_search, "searchsearch")
 
             onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
             list(self.radiohandler.get_model_data_from_content_search("searchsearch", None))
             self.assertEquals(self.radiohandler._last_search, "searchsearch")
+            self.assertEquals(list(self.radiohandler._last_all_radios_dict.keys()), ["search"])
             onlineradioinfromclass().get_stations_by_searchstring.assert_called_once_with("searchsearch")
+
+            # ensure when switching back to global that the cache is cleaned
+            list(self.radiohandler.get_model_data_from_content_search("", None))
+            self.assertEquals(list(self.radiohandler._last_all_radios_dict.keys()), ["recommended", "local", "top"])
+            self.assertEquals(self.radiohandler._last_search, "")
 

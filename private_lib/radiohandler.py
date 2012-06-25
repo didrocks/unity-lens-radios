@@ -19,6 +19,7 @@
 
 import gettext
 from gi.repository import Unity
+import logging
 
 from .enums import CATEGORIES
 from .onlineradioinfo import OnlineRadioInfo
@@ -26,6 +27,7 @@ from .radio import transform_decade_str_in_int
 from .tools import singleton
 
 _ = gettext.gettext
+_log = logging.getLogger(__name__)
 
 
 @singleton
@@ -39,6 +41,7 @@ class RadioHandler(object):
 
     def get_unity_radio_categories(self, categories):
         '''Build and return new radio categories for unity'''
+        _log.debug("Got unity categories")
         unity_categories = []
         for category in categories:
             unity_categories.append(Unity.Category.new(category['name'], category['icon'],
@@ -47,6 +50,7 @@ class RadioHandler(object):
 
     def get_unity_radio_filters(self):
         '''Build and return new radio filters for unity'''
+        _log.debug("Got unity filter")
         # decade, genre, country
         unity_filters = []
         filt = Unity.MultiRangeFilter.new("decade", _("Decade"), None, False)
@@ -64,7 +68,7 @@ class RadioHandler(object):
         unity_filters.append(filt)
         filt = Unity.CheckOptionFilter.new("country", _("Country"), None, False)
         for country in OnlineRadioInfo().get_categories_by_category_type('country'):
-            filt.add_option(genre, genre, None)
+            filt.add_option(country, country, None)
         unity_filters.append(filt)
         return unity_filters
 
@@ -73,6 +77,7 @@ class RadioHandler(object):
 
         returns a tuple with the radio itself and an updated model data ready to be appended (iterator)'''
 
+        _log.debug("Searching for: {0}".format(search_terms))
         radios_dict = self._last_all_radios_dict
         # first, the search itself
         if self._last_search is None or search_terms != self._last_search:
@@ -82,6 +87,7 @@ class RadioHandler(object):
                 for category in radios_dict:
                     radios_dict[category] = list(radios_dict[category])
             else:
+                radios_dict = {}
                 radios_dict["search"] = OnlineRadioInfo().get_stations_by_searchstring(search_terms)
 
             # save the state, without filters (all radios)
@@ -121,6 +127,7 @@ class RadioHandler(object):
                     if category not in filters:
                         filters[category] = set()
                     filters[category].add(option.props.id)
+        _log.debug("Returning active filters: {0}".format(filters))
         return filters
 
     def _filter_radios(self, radios, filters):

@@ -18,9 +18,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gettext import gettext as _
+import logging
+
 
 class CATEGORIES():
     (RECOMMENDED, TOP, LOCAL, SEARCH_RADIO) = range(4)
+
+LEVELS = (logging.ERROR,
+        logging.WARNING,
+        logging.INFO,
+        logging.DEBUG,
+        )
 
 DBUS_NAME = 'com.canonical.Unity.Lens.Radios'
 DBUS_PATH = '/com/canonical/unity/lens/radios'
