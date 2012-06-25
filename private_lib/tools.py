@@ -27,3 +27,8 @@ def singleton(cls):
             instances[cls] = cls(*args, **kwargs)
         return instances[cls]
     return getinstance
+
+
+def get_icon_path():
+    '''Get the relative or absolute icon paths for the lens'''
+    return '/usr/share/icons/unity-icon-theme/places/svg/'

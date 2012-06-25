@@ -130,7 +130,7 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
 
         radio_list = list(stations_list_gen)
         # the urllib request is only done when the generator is done at least once, so check only now for call
-        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&end=1000")
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&rows=1000")
         self.assertIsInstance(radio_list[0], Radio)
         self.assertEquals(len(radio_list), 1000)
 
@@ -155,7 +155,7 @@ class OnlineRadioInfoMainTests(OnlineRadioInfoTestsCommon):
 
         list(stations_list_gen)
         # the urllib request is only done when the generator is done at least once, so check only now for call
-        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&end=42")
+        urllibmock.request.Request.assert_called_once_with(self.radioinfo.radio_base_url + "/index/searchembeddedbroadcast?q=radio&start=0&rows=42")
 
 
 class OnlineRadioInfoLangTests(OnlineRadioInfoTestsCommon):

@@ -68,13 +68,14 @@ class RadioHandler(object):
         unity_filters.append(filt)
         return unity_filters
 
-    def search_content(self, search_terms, model, scope):
-        '''Search current content, eventually filtered, returns an updated model'''
+    def get_model_data_from_content_search(self, search_terms, scope):
+        '''Search current content, eventually filtered
+
+        returns a tuple with the radio itself and an updated model data ready to be appended (iterator)'''
 
         radios_dict = self._last_all_radios_dict
         # first, the search itself
         if self._last_search is None or search_terms != self._last_search:
-            model.clear()
             if search_terms == "":
                 radios_dict = OnlineRadioInfo().get_most_wanted_stations()
                 # change the generator to a list for copying them back in cache
@@ -101,7 +102,7 @@ class RadioHandler(object):
             elif category == "local":
                 cat = CATEGORIES.LOCAL
             for valid_radio in validate_function(radios_dict[category], filters):
-                model.append(valid_radio.id, valid_radio.picture_url, cat, "text/html", valid_radio.name, valid_radio.current_track, "")
+                yield (valid_radio, (str(valid_radio.id), valid_radio.picture_url, cat, "text/html", valid_radio.name, valid_radio.current_track, ""))
 
     def _return_active_filters(self, scope):
         '''Return current active filters for the scope
@@ -116,10 +117,10 @@ class RadioHandler(object):
             filters["decade"] = [decade_filter.get_first_active(), decade_filter.get_last_active()]
         for category in ("genre", "country"):
             for option in scope.get_filter(category).options:
-                if option.active:
+                if option.props.active:
                     if category not in filters:
                         filters[category] = set()
-                    filters[category].add(option.id)
+                    filters[category].add(option.props.id)
         return filters
 
     def _filter_radios(self, radios, filters):

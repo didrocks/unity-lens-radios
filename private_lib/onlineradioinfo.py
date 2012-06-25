@@ -22,21 +22,13 @@ import json
 import locale
 import logging
 import urllib
+import urllib.parse
+import urllib.request
 
+from .tools import singleton
 from .radio import Radio
 
 _log = logging.getLogger(__name__)
-
-
-def singleton(cls):
-    singleton.instances = {}
-
-    def getinstance(*args, **kwargs):
-        instances = singleton.instances
-        if cls not in instances:
-            instances[cls] = cls(*args, **kwargs)
-        return instances[cls]
-    return getinstance
 
 
 class ConnectionError(Exception):
@@ -106,7 +98,7 @@ class OnlineRadioInfo(object):
         _log.debug('getting stations for {1} research, limited to {0} results'.format(search_string, max_num_entries))
         for json_radio in self._get_json_result_for_parameters('index/searchembeddedbroadcast', q=search_string,
                                                                                                 start=0,
-                                                                                                end=max_num_entries):
+                                                                                                rows=max_num_entries):
             yield Radio(json_radio, self)
 
     def get_details_by_station_id(self, station_id):

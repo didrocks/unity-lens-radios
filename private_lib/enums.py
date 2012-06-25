@@ -17,6 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from gettext import gettext as _
 
 class CATEGORIES():
     (RECOMMENDED, TOP, LOCAL, SEARCH_RADIO) = range(4)
+
+DBUS_NAME = 'com.canonical.Unity.Lens.Radios'
+DBUS_PATH = '/com/canonical/unity/lens/radios'
+
+LENS_NAME = 'radios'
+
+SEARCH_HINT = _("Search online radios")
