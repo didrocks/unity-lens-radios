@@ -150,7 +150,8 @@ class OnlineRadioInfo(object):
 
         try:
             json_result = json.loads(response)
-            _log.debug('Connection successfully completed done ({0} bytes) and returning: {1}'.format(len(response), json_result))
+            _log.debug('Connection successfully completed done ({} bytes)'.format(len(response)))
+            #_log.debug('Connection successfully completed done ({0} bytes) and returning: {1}'.format(len(response), json_result))
         except (ValueError, TypeError) as error:
             _log.warning("Couldn't convert the result into json: {0}. The Error is: {1}".format(response, error))
             raise ConnectionError(error)

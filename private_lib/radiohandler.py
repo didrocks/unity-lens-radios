@@ -88,7 +88,7 @@ class RadioHandler(object):
                     radios_dict[category] = list(radios_dict[category])
             else:
                 radios_dict = {}
-                radios_dict["search"] = OnlineRadioInfo().get_stations_by_searchstring(search_terms)
+                radios_dict["search"] = list(OnlineRadioInfo().get_stations_by_searchstring(search_terms))
 
             # save the state, without filters (all radios)
             self._last_all_radios_dict = radios_dict
@@ -120,7 +120,7 @@ class RadioHandler(object):
         # check filters on the current radio list
         decade_filter = scope.get_filter("decade")
         if decade_filter.get_first_active() and decade_filter.get_last_active():
-            filters["decade"] = [decade_filter.get_first_active(), decade_filter.get_last_active()]
+            filters["decade"] = [int(decade_filter.get_first_active().props.id), int(decade_filter.get_last_active().props.id)]
         for category in ("genre", "country"):
             for option in scope.get_filter(category).options:
                 if option.props.active:

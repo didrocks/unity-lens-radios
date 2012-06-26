@@ -143,8 +143,8 @@ class RadioHandlerTests(unittest.TestCase):
         def return_mock_filter_with_active_options(domain):
             obj = Mock()
             if domain == "decade":
-                obj.get_first_active.return_value = 1900
-                obj.get_last_active.return_value = 1950
+                obj.get_first_active().props.id = '1900'
+                obj.get_last_active().props.id = '1950'
             elif domain == 'genre' or domain == 'country':
                 if domain == 'genre':
                     dom_id = 1
