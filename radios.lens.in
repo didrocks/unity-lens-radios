@@ -1,0 +1,12 @@
+[Lens]
+DBusName=com.canonical.Unity.Lens.Radios
+DBusPath=/com/canonical/unity/lens/radios
+Icon=/usr/share/unity/5/lens-nav-music.svg
+_Name=Radio Lens
+_Description=Find your favorite onlines radios
+_SearchHint=Search online radios
+Shortcut=r
+
+[Desktop Entry]
+X-Ubuntu-Gettext-Domain=unity-lens-radios
+

@@ -1,0 +1,86 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-26 16:04+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../unity-lens-radios:50
+msgid "Recommended"
+msgstr ""
+
+#: ../unity-lens-radios:52
+msgid "Top"
+msgstr ""
+
+#: ../unity-lens-radios:54
+msgid "Near you"
+msgstr ""
+
+#: ../unity-lens-radios:56
+msgid "Result of your search"
+msgstr ""
+
+#: ../radios.lens.in.h:1
+msgid "Radio Lens"
+msgstr ""
+
+#: ../radios.lens.in.h:2
+msgid "Find your favorite onlines radios"
+msgstr ""
+
+#: ../radios.lens.in.h:3 ../private_lib/enums.py:38
+msgid "Search online radios"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:56
+msgid "Decade"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:57
+msgid "Old"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:58
+msgid "60s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:59
+msgid "70s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:60
+msgid "80s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:61
+msgid "90s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:62
+msgid "00s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:63
+msgid "10s"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:65
+msgid "Genre"
+msgstr ""
+
+#: ../private_lib/radiohandler.py:69
+msgid "Country"
+msgstr ""
