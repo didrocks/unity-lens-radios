@@ -1,0 +1,126 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# Copyright: (C) 2012 Canonical
+#
+# Authors:
+#  Didier Roche <didrocks@ubuntu.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import argparse
+from gettext import gettext as _
+from gi.repository import Gio, GLib, GObject
+from gi.repository import Unity
+import logging
+import os
+from subprocess import Popen
+import sys
+
+from private_lib.enums import DBUS_NAME, DBUS_PATH, LENS_NAME, LEVELS, SEARCH_HINT
+import private_lib.tools as tools
+from private_lib.radiohandler import RadioHandler
+
+_log = logging.getLogger(__name__)
+
+
+class Daemon(object):
+
+    def __init__(self):
+        self._current_radio_dict = {}
+
+        self.lens = Unity.Lens.new(DBUS_PATH, LENS_NAME)
+        self.lens.props.search_hint = SEARCH_HINT
+        self.lens.props.visible = True
+        self.lens.props.search_in_global = False
+        self.radiohandler = RadioHandler()
+
+        # populate categories and filters
+        icons_path = tools.get_icon_path()
+        categories = [{'name': _("Recommended"),
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-mostused.svg'))},
+                      {'name': _("Top"),
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-recent.svg'))},
+                      {'name': _("Near you"),
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-downloads.svg'))},
+                      {'name': _("Result of your search"),
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-songs.svg'))}]
+        self.lens.props.categories = self.radiohandler.get_unity_radio_categories(categories)
+        self.lens.props.filters = self.radiohandler.get_unity_radio_filters()
+
+        # setup the local scope
+        self.scope = Unity.Scope.new(DBUS_PATH + '/main')
+        self.scope.props.search_in_global = False
+        self.scope.connect('search-changed', self._on_search_changed)
+        self.scope.connect('filters-changed', self._on_filters_changed)
+        self.scope.connect('activate-uri', self._on_activate_uri)
+
+        self.lens.add_local_scope(self.scope)
+        self.lens.export()
+
+    def _on_search_changed(self, scope, search, search_type, cancellable):
+        '''Called when a search is changed'''
+        self._current_radio_dict = {}
+        search_string = search.props.search_string
+        model = search.props.results_model
+        model.clear()
+        # only search for at least 3 characters
+        if len(search_string) > 2 or search_string == "":
+            for (radio, model_data) in self.radiohandler.get_model_data_from_content_search(search_string, scope):
+                if cancellable.is_cancelled():
+                    break
+                model.append(*model_data)
+                self._current_radio_dict[radio.id] = radio
+                # this allows the UI to update while we loop (proceeding the gsource event)
+                GLib.main_context_default().iteration(True)
+
+        search.emit("finished")
+        search.finished()
+
+    def _on_filters_changed(self, scope):
+        '''Called on filters tweaking'''
+        # we can call the search changed, as we handle changing there
+        self.scope.queue_search_changed(Unity.SearchType.DEFAULT)
+
+    def _on_activate_uri(self, scope, uri):
+        '''Activate the radio with the current uri (being the radio id)
+
+        Request more details on the network (lazy loading) if not already in memory'''
+        try:
+            for url in self._current_radio_dict[int(uri)].stream_urls:
+                Popen(["rhythmbox-client", "--play-uri", url, "--activate-source", url])
+        except KeyError:
+            _log.warning("Can't active radio with id: {0}: can't find it in internal memory".format(uri))
+        return Unity.ActivationResponse(handled=Unity.HandledType.HIDE_DASH, goto_uri=uri)
+
+if __name__ == '__main__':
+
+    bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    proxy = Gio.DBusProxy.new_sync(bus, 0, None,
+                                   'org.freedesktop.DBus',
+                                   '/org/freedesktop/DBus',
+                                   'org.freedesktop.DBus', None)
+    result = proxy.RequestName('(su)', DBUS_NAME, 0x4)
+    if result != 1:
+        _log.critical("Name '{0}' is already owned on the session bus. Aborting.".format(DBUS_NAME))
+        sys.exit(1)
+
+    parser = argparse.ArgumentParser(description='unity online radio lens')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                        help=_('debug verbose mode'))
+    result = parser.parse_args()
+    if result.verbose:
+        logging.basicConfig(level=LEVELS[3], format='%(asctime)s %(levelname)s %(message)s')
+
+    daemon = Daemon()
+    GObject.MainLoop().run()
