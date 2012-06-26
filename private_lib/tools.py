@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 
 def singleton(cls):
     singleton.instances = {}
@@ -31,4 +33,4 @@ def singleton(cls):
 
 def get_icon_path():
     '''Get the relative or absolute icon paths for the lens'''
-    return '/usr/share/icons/unity-icon-theme/places/svg/'
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'images')

@@ -99,3 +99,13 @@ class RadioTests(unittest.TestCase):
         self.assertEquals(transform_decade_str_in_int('90'), 1990)
         self.assertEquals(transform_decade_str_in_int('1995'), 1995)
         self.assertEquals(transform_decade_str_in_int('230'), 230)
+
+    def test_getting_default_mimetype_if_no_image(self):
+        '''Test that we are getting the default image if we have no artwork'''
+        radio_data = json.loads('{"playable":"FREE","genresAndTopics":"Electro, Lounge",'\
+                                '"broadcastType":1,"picture1Name":"",'\
+                                '"streamContentFormat":"MP3","currentTrack":"Wahoo - Holding You","country":"France","id":2511,"rank":199,'\
+                                '"name":"Vmix Late","subdomain":"vmixlatemix","bitrate":128,"rating":5,'\
+                                '"pictureBaseURL":"http://static.radio.de/images/broadcasts/"}')
+        radio = Radio(radio_data, None)
+        self.assertEqual(radio.picture_url, 'audio-x-generic')

@@ -17,7 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import re
+
+_log = logging.getLogger(__name__)
 
 
 class Radio(object):
@@ -30,6 +33,8 @@ class Radio(object):
         self.name = data['name']
         self.picture_url = '{0}{1}'.format(data['pictureBaseURL'],
                                            data['picture1Name'])
+        if not data['picture1Name']:
+            self.picture_url = 'audio-x-generic'
         year_regexp = re.compile("(Années*|Years*) (\d*)")
         genres_list = []
         decades_list = []
