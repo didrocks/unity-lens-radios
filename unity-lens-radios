@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3.2
 # -*- coding: utf-8 -*-
 # Copyright: (C) 2012 Canonical
 #
@@ -50,9 +50,9 @@ class Daemon(object):
         categories = [{'name': _("Recommended"),
                        'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-mostused.svg'))},
                       {'name': _("Top"),
-                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-recent.svg'))},
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-top.svg'))},
                       {'name': _("Near you"),
-                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-downloads.svg'))},
+                       'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-near.svg'))},
                       {'name': _("Result of your search"),
                        'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-songs.svg'))}]
         self.lens.props.categories = self.radiohandler.get_unity_radio_categories(categories)
@@ -78,6 +78,7 @@ class Daemon(object):
         if len(search_string) > 2 or search_string == "":
             for (radio, model_data) in self.radiohandler.get_model_data_from_content_search(search_string, scope):
                 if cancellable.is_cancelled():
+                    model.clear()
                     break
                 model.append(*model_data)
                 self._current_radio_dict[radio.id] = radio
