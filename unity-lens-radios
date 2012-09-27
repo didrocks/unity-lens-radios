@@ -62,8 +62,11 @@ class Daemon(object):
         self.scope = Unity.Scope.new(DBUS_PATH + '/main')
         self.scope.props.search_in_global = False
         self.scope.connect('search-changed', self._on_search_changed)
-        self.scope.connect('filters-changed', self._on_filters_changed)
+        self.scope.connect('filters-changed', self._on_filters_or_preferences_changed)
         self.scope.connect('activate-uri', self._on_activate_uri)
+
+        self.preferences = Unity.PreferencesManager.get_default()
+        self.preferences.connect("notify::remote-content-search", self._on_filters_or_preferences_changed)
 
         self.lens.add_local_scope(self.scope)
         self.lens.export()
@@ -74,6 +77,13 @@ class Daemon(object):
         search_string = search.props.search_string
         model = search.props.results_model
         model.clear()
+
+        # only perform the request if the user has not disabled
+        # online/commercial suggestions. That will hide the category as well.
+        if self.preferences.props.remote_content_search != Unity.PreferencesManagerRemoteContent.ALL:
+            search.finished()
+            return
+
         # only search for at least 3 characters
         if len(search_string) > 2 or search_string == "":
             for (radio, model_data) in self.radiohandler.get_model_data_from_content_search(search_string, scope):
@@ -88,8 +98,8 @@ class Daemon(object):
         search.emit("finished")
         search.finished()
 
-    def _on_filters_changed(self, scope):
-        '''Called on filters tweaking'''
+    def _on_filters_or_preferences_changed(self, *_):
+        '''Called on filters and preferences tweaking'''
         # we can call the search changed, as we handle changing there
         self.scope.queue_search_changed(Unity.SearchType.DEFAULT)
 
