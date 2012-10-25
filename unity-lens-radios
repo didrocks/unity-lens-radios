@@ -55,8 +55,11 @@ class Daemon(object):
                        'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-near.svg'))},
                       {'name': _("Result of your search"),
                        'icon': Gio.ThemedIcon.new(os.path.join(icons_path, 'group-songs.svg'))}]
-        self.lens.props.categories = self.radiohandler.get_unity_radio_categories(categories)
-        self.lens.props.filters = self.radiohandler.get_unity_radio_filters()
+        try:
+            self.lens.props.categories = self.radiohandler.get_unity_radio_categories(categories)
+            self.lens.props.filters = self.radiohandler.get_unity_radio_filters()
+        except:
+          sys.exit(1) 
 
         # setup the local scope
         self.scope = Unity.Scope.new(DBUS_PATH + '/main')
